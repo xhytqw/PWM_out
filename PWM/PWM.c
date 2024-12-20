@@ -21,171 +21,110 @@ void PWM_SetDutyCycle(TIM_TypeDef* TIMx, uint8_t channel, uint16_t dutyCycle)
     }
 }
 
-// ³õÊ¼»¯TIM2µÄPWM¹¦ÄÜ
+// åˆå§‹åŒ–TIM2çš„PWMåŠŸèƒ½
 void TIM2_PWM_CH1_Init(u16 arr, u16 psc) 
 {
     GPIO_InitTypeDef GPIO_InitStructure;
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
     TIM_OCInitTypeDef TIM_OCInitStructure;
 
-    // Ê¹ÄÜTIM2ºÍGPIOAÊ±ÖÓ
+    // ä½¿èƒ½TIM2å’ŒGPIOAæ—¶é’Ÿ
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
 
-    // ÅäÖÃGPIOAµÄ0Òı½ÅÎª¸´ÓÃÍÆÍìÊä³ö
+    // é…ç½®GPIOAçš„0å¼•è„šä¸ºå¤ç”¨æ¨æŒ½è¾“å‡º
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &GPIO_InitStructure);
 
-    // ³õÊ¼»¯TIM2¶¨Ê±Æ÷
+    // åˆå§‹åŒ–TIM2å®šæ—¶å™¨
     TIM_TimeBaseStructure.TIM_Period = arr;
     TIM_TimeBaseStructure.TIM_Prescaler = psc;
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
 
-    // ÅäÖÃTIM2µÄÊä³ö±È½ÏÄ£Ê½ÎªPWMÄ£Ê½1
+    // é…ç½®TIM2çš„è¾“å‡ºæ¯”è¾ƒæ¨¡å¼ä¸ºPWMæ¨¡å¼1
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
 
-    // ³õÊ¼»¯TIM2µÄÍ¨µÀ1
+    // åˆå§‹åŒ–TIM2çš„é€šé“1
     TIM_OC1Init(TIM2, &TIM_OCInitStructure);
     TIM_OC1PreloadConfig(TIM2, TIM_OCPreload_Enable);
 /*
-    // ³õÊ¼»¯TIM2µÄÍ¨µÀ2
+    // åˆå§‹åŒ–TIM2çš„é€šé“2
     TIM_OC2Init(TIM2, &TIM_OCInitStructure);
     TIM_OC2PreloadConfig(TIM2, TIM_OCPreload_Enable);
 
-    // ³õÊ¼»¯TIM2µÄÍ¨µÀ3
+    // åˆå§‹åŒ–TIM2çš„é€šé“3
     TIM_OC3Init(TIM2, &TIM_OCInitStructure);
     TIM_OC3PreloadConfig(TIM2, TIM_OCPreload_Enable);
 
-    // ³õÊ¼»¯TIM2µÄÍ¨µÀ4
+    // åˆå§‹åŒ–TIM2çš„é€šé“4
     TIM_OC4Init(TIM2, &TIM_OCInitStructure);
     TIM_OC4PreloadConfig(TIM2, TIM_OCPreload_Enable);
 */
-    // Ê¹ÄÜTIM2µÄ×Ô¶¯ÖØ×°¼Ä´æÆ÷
+    // ä½¿èƒ½TIM2çš„è‡ªåŠ¨é‡è£…å¯„å­˜å™¨
     TIM_ARRPreloadConfig(TIM2, ENABLE);
+		TIM2->EGR = TIM_PSCReloadMode_Immediate;
+    TIM_GenerateEvent(TIM2, TIM_EventSource_Update);
 		TIM_Cmd(TIM2, ENABLE);
 
 }
 /*****************************************
-¶¯Ì¬µ÷ÕûarrÒÔÊµÏÖ¼«¿íµÄÆµÂÊµ÷Õû·¶Î§
-ÆµÂÊÀíÂÛ×î¸ßÖµ36M
+åŠ¨æ€è°ƒæ•´arrä»¥å®ç°æå®½çš„é¢‘ç‡è°ƒæ•´èŒƒå›´
+é¢‘ç‡ç†è®ºæœ€é«˜å€¼36M
 ******************************************/
-void PWM2_CH1_set(int32_t fre, int duty)  //freÎª32Î»int
+void PWM2_CH1_set(int32_t fre, int duty)  //freä¸º32ä½int
 {
     int arr, ccr;
-    int psc=1; // ³õÊ¼ÖµÎª1
+    int psc=0;       // åˆå§‹å€¼ä¸º1
 		
-		static int prev_arr=-1, prev_psc=-1;
+		//static int prev_arr=-1, prev_psc=-1;
 	
-    if (fre <= 0 || duty < 0 || duty > 100) 
-		return; // ±ÜÃâ·Ç·¨²ÎÊı
-
-		arr = (int)((72000000.0/(psc * fre))+0.5)-1;
-	
-		while (arr > 65535 && psc < 65536)   //arrµÄ¶¯Ì¬²ÎÊıµ÷Õû
+    if(fre<=0||duty< 0||duty>100) 
+		{
+				return;      // é¿å…éæ³•å‚æ•°
+		}
+		
+		arr = (int)((72000000.0/((psc+1) * fre))+0.5)-1;
+		
+		if (arr<1)
+		{
+    // é¿å… ARR = 0 çš„æƒ…å†µ
+			arr = 1;
+		}
+		while(arr>65535&&psc< 65536)   //arrçš„åŠ¨æ€å‚æ•°è°ƒæ•´
 		{
 				psc++;
-				arr = 72000000 / (psc * fre) - 1;
+				arr = 72000000/(psc*fre)-1;
 		}
-		arr = (int)((72000000.0/(psc * fre))+0.5)-1;		//floatÇ¿×ªintÌá¸ß¾«¶È ËÄÉáÎåÈë
 		
-		if (psc >= 65536 || arr <= 0) return; // ³¬³ö·¶Î§
-
-    // ¼ÆËãÕ¼¿Õ±ÈµÄ±È½ÏÖµ CCR
-    ccr = ((arr + 1) * duty) / 100; // Õ¼¿Õ±È¼ÆËã¹«Ê½
+		arr = (int)((72000000.0/((psc+1) * fre))+0.5)-1;		//floatå¼ºè½¬intæé«˜ç²¾åº¦ å››èˆäº”å…¥
 		
-		/*duty = 100Ê±£¬¹«Ê½¿ÉÄÜ¼ÆËã³ö ccr ³¬³ö arr + 1 µÄ·¶Î§*/
-		if(ccr>arr)   //¼ÓÏŞÖÆ
-			ccr=arr;
-
-    if (arr != prev_arr || psc != prev_psc) 
+		if (psc>=65536||arr<=0)
 		{
-        TIM2_PWM_CH1_Init(arr, psc);
-        prev_arr = arr;
-        prev_psc = psc;
+				return; // è¶…å‡ºèŒƒå›´
+		}
+    // è®¡ç®—å ç©ºæ¯”çš„æ¯”è¾ƒå€¼ CCR
+    ccr = ((arr + 1) * duty) / 100; // å ç©ºæ¯”è®¡ç®—å…¬å¼
+		
+		/*duty = 100æ—¶ï¼Œå…¬å¼å¯èƒ½è®¡ç®—å‡º ccr è¶…å‡º arr + 1 çš„èŒƒå›´*/
+		
+		if(ccr>arr)   //åŠ é™åˆ¶
+		{
+				ccr=arr;
+		}
+		/*
+    if (arr!=prev_arr||psc!=prev_psc) 
+		{
+        
+        prev_arr=arr;
+        prev_psc=psc;
     }
-
+		*/
+		TIM2_PWM_CH1_Init(arr, psc);
     PWM_SetDutyCycle(TIM2, 1, ccr);
 }
-/*
-void PWM2_CH2_set(int fre, int duty)
-{
-    int arr, ccr;
-    int psc = 71;
-    // ¼ì²éÆµÂÊºÍÕ¼¿Õ±È²ÎÊıÊÇ·ñºÏ·¨
-    if (fre <= 0 || duty < 0 || duty > 100) return; // ±ÜÃâ·Ç·¨²ÎÊı
-
-    // Ô¤·ÖÆµÆ÷ÉèÖÃÎª¹Ì¶¨Öµ
-    
-
-    // ¼ÆËã×Ô¶¯ÖØ×°Öµ ARR
-    arr = (72000000 / psc / fre) - 1;
-
-    // ¼ì²é ARR ÊÇ·ñ³¬³ö·¶Î§
-    if (arr < 0 || arr > 65535) return; // ³¬³ö¶¨Ê±Æ÷·¶Î§
-
-    // ¼ÆËãÕ¼¿Õ±ÈµÄ±È½ÏÖµ CCR
-    ccr = (arr + 1) * duty / 100; // Õ¼¿Õ±È¼ÆËã¹«Ê½
-
-    // ³õÊ¼»¯¶¨Ê±Æ÷ PWM
-    TIM2_PWM_CH2_Init(arr, psc);
-
-    // ÉèÖÃ PWM Õ¼¿Õ±È
-    PWM_SetDutyCycle(TIM2, 1, ccr);
-}
-void PWM2_CH3_set(int fre, int duty)
-{
-    int arr, ccr;
-    int psc = 71;
-    // ¼ì²éÆµÂÊºÍÕ¼¿Õ±È²ÎÊıÊÇ·ñºÏ·¨
-    if (fre <= 0 || duty < 0 || duty > 100) return; // ±ÜÃâ·Ç·¨²ÎÊı
-
-    // Ô¤·ÖÆµÆ÷ÉèÖÃÎª¹Ì¶¨Öµ
-    
-
-    // ¼ÆËã×Ô¶¯ÖØ×°Öµ ARR
-    arr = (72000000 / psc / fre) - 1;
-
-    // ¼ì²é ARR ÊÇ·ñ³¬³ö·¶Î§
-    if (arr < 0 || arr > 65535) return; // ³¬³ö¶¨Ê±Æ÷·¶Î§
-
-    // ¼ÆËãÕ¼¿Õ±ÈµÄ±È½ÏÖµ CCR
-    ccr = (arr + 1) * duty / 100; // Õ¼¿Õ±È¼ÆËã¹«Ê½
-
-    // ³õÊ¼»¯¶¨Ê±Æ÷ PWM
-    TIM2_PWM_CH3_Init(arr, psc);
-
-    // ÉèÖÃ PWM Õ¼¿Õ±È
-    PWM_SetDutyCycle(TIM2, 1, ccr);
-}
-void PWM2_CH4_set(int fre, int duty)
-{
-    int arr, ccr;
-    int psc = 71;
-    // ¼ì²éÆµÂÊºÍÕ¼¿Õ±È²ÎÊıÊÇ·ñºÏ·¨
-    if (fre <= 0 || duty < 0 || duty > 100) return; // ±ÜÃâ·Ç·¨²ÎÊı
-
-    // Ô¤·ÖÆµÆ÷ÉèÖÃÎª¹Ì¶¨Öµ
-    
-
-    // ¼ÆËã×Ô¶¯ÖØ×°Öµ ARR
-    arr = (72000000 / psc / fre) - 1;
-
-    // ¼ì²é ARR ÊÇ·ñ³¬³ö·¶Î§
-    if (arr < 0 || arr > 65535) return; // ³¬³ö¶¨Ê±Æ÷·¶Î§
-
-    // ¼ÆËãÕ¼¿Õ±ÈµÄ±È½ÏÖµ CCR
-    ccr = (arr + 1) * duty / 100; // Õ¼¿Õ±È¼ÆËã¹«Ê½
-
-    // ³õÊ¼»¯¶¨Ê±Æ÷ PWM
-    TIM2_PWM_CH4_Init(arr, psc);
-
-    // ÉèÖÃ PWM Õ¼¿Õ±È
-    PWM_SetDutyCycle(TIM2, 1, ccr);
-}
-*/
